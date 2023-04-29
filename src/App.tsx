@@ -2,24 +2,34 @@ import { useRef, useEffect, useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
 import { grey } from '@mui/material/colors';
-
 import Webcam from 'react-webcam';
 import * as tf from '@tensorflow/tfjs';
-import { nextFrame } from '@tensorflow/tfjs';
+
+import { drawRect } from './utilities';
 
 const App = () => {
   const [detectMode, setDetectMode] = useState<'spell' | 'word'>('spell');
-  const [cameraMode, setCameraMode] = useState<'user' | 'environment'>('environment');
-  const [mirrored, setMirrored] = useState(false);
+  const [cameraMode, setCameraMode] = useState<'user' | 'environment'>('user');
+  const [mirrored, setMirrored] = useState(true);
+  // const [typed, setTyped] = useState<any>(null);
+  const [detectedText, setDetectedText] = useState('');
 
   const webcamRef = useRef<Webcam>(null);
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  let webcamWidth, webcamHeight;
+
+  if (window.innerWidth > window.innerHeight) {
+    webcamWidth = window.innerWidth;
+    webcamHeight = window.innerHeight;
+  } else {
+    webcamWidth = window.innerHeight;
+    webcamHeight = window.innerWidth;
+  }
 
   // Main function
   const runCoco = async () => {
     // 3. TODO - Load network
-    // e.g. const net = await cocossd.load();
-    // https://tensorflowjsrealtimemodel.s3.au-syd.cloud-object-storage.appdomain.cloud/model.json
     const net = await tf.loadGraphModel(
       'https://tensorflowjsrealtimemodel.s3.au-syd.cloud-object-storage.appdomain.cloud/model.json',
     );
@@ -46,30 +56,41 @@ const App = () => {
       webcamRef.current.video.width = videoWidth;
       webcamRef.current.video.height = videoHeight;
 
-      // // Set canvas height and width
-      // canvasRef.current.width = videoWidth;
-      // canvasRef.current.height = videoHeight;
-
       // 4. TODO - Make Detections
       const img = tf.browser.fromPixels(video);
       const resized = tf.image.resizeBilinear(img, [640, 480]);
       const casted = resized.cast('int32');
       const expanded = casted.expandDims(0);
       const obj = await net.executeAsync(expanded);
-      console.log(obj);
+      // console.log(obj);
 
-      // const boxes = await obj[1].array();
-      // const classes = await obj[2].array();
-      // const scores = await obj[4].array();
+      if (Array.isArray(obj)) {
+        const boxes: any = await obj[1].array();
+        const classes: any = await obj[2].array();
+        const scores: any = await obj[4].array();
 
-      // Draw mesh
-      // const ctx = canvasRef.current.getContext('2d');
+        // Draw mesh
+        const ctx = canvasRef.current?.getContext('2d');
 
-      // 5. TODO - Update drawing utility
-      // drawSomething(obj, ctx)
-      // requestAnimationFrame(() => {
-      //   drawRect(boxes[0], classes[0], scores[0], 0.8, videoWidth, videoHeight, ctx);
-      // });
+        if (ctx) {
+          requestAnimationFrame(() => {
+            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            const currText = drawRect(
+              boxes[0],
+              classes[0],
+              scores[0],
+              0.8,
+              videoWidth,
+              videoHeight,
+              ctx,
+            );
+
+            if (currText && currText !== detectedText) {
+              setDetectedText(currText);
+            }
+          });
+        }
+      }
 
       tf.dispose(img);
       tf.dispose(resized);
@@ -80,50 +101,29 @@ const App = () => {
   };
 
   useEffect(() => {
-    // runCoco();
-  }, []);
-
-  const options = [
-    {
-      label: <span>Foo</span>,
-      value: {
-        foo: true,
-      },
-      selectedBackgroundColor: '#0097e6',
-    },
-    {
-      label: 'Bar',
-      value: 'bar',
-      selectedBackgroundColor: '#fbc531',
-    },
-  ];
-
-  const onChange = (newValue: any) => {
-    console.log(newValue);
-  };
-
-  const initialSelectedIndex = options.findIndex(({ value }) => value === 'bar');
+    runCoco();
+  });
 
   return (
     <div>
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'absolute',
+          zIndex: 998,
+        }}
+        width={window.innerWidth}
+        height={window.innerHeight}
+      />
       <Webcam
         ref={webcamRef}
         muted
         videoConstraints={{
-          width: window.innerHeight,
-          height: window.innerWidth,
-          facingMode: { exact: cameraMode },
+          width: webcamWidth,
+          height: webcamHeight,
+          facingMode: cameraMode,
         }}
-        mirrored={mirrored}
-        // style={{
-        //   position: 'absolute',
-        //   marginLeft: '0',
-        //   marginRight: '0',
-        //   padding: 0,
-        //   top: 0,
-        //   right: 0,
-        //   textAlign: 'center',
-        // }}
+        // mirrored={mirrored}
       />
       <div
         style={{
@@ -140,6 +140,36 @@ const App = () => {
           paddingBottom: 10,
         }}
       >
+        {/* <Typed
+          typedRef={(typed: any) => {
+            setTyped(typed);
+          }}
+          strings={detectedText}
+          typeSpeed={20}
+          style={{
+            color: 'white',
+            position: 'absolute',
+            bottom: 65,
+            backgroundColor: 'black',
+            padding: 10,
+            borderRadius: 10,
+            fontSize: 14,
+          }}
+          showCursor={false}
+        /> */}
+        <p
+          style={{
+            color: 'white',
+            position: 'absolute',
+            bottom: 65,
+            backgroundColor: 'black',
+            padding: 10,
+            borderRadius: 10,
+            fontSize: 14,
+          }}
+        >
+          {detectedText}
+        </p>
         <button
           onClick={() => setDetectMode('spell')}
           style={{
@@ -188,6 +218,8 @@ const App = () => {
               setMirrored(true);
             }, 740);
           }
+
+          // typed?.reset();
         }}
       >
         <CameraswitchIcon sx={{ color: grey[50] }} />
