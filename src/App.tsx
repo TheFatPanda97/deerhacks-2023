@@ -4,8 +4,10 @@ import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
 import { grey } from '@mui/material/colors';
 import Webcam from 'react-webcam';
 import * as tf from '@tensorflow/tfjs';
+import * as fp from 'fingerpose';
+import * as handpose from '@tensorflow-models/handpose';
 
-import { drawRect } from './utilities';
+import { drawRect, drawHand } from './utilities';
 
 const App = () => {
   const [detectMode, setDetectMode] = useState<'spell' | 'word'>('spell');
@@ -56,47 +58,61 @@ const App = () => {
       webcamRef.current.video.width = videoWidth;
       webcamRef.current.video.height = videoHeight;
 
-      // 4. TODO - Make Detections
-      const img = tf.browser.fromPixels(video);
-      const resized = tf.image.resizeBilinear(img, [640, 480]);
-      const casted = resized.cast('int32');
-      const expanded = casted.expandDims(0);
-      const obj = await net.executeAsync(expanded);
+      // // 4. TODO - Make Detections
+      // const img = tf.browser.fromPixels(video);
+      // const resized = tf.image.resizeBilinear(img, [640, 480]);
+      // const casted = resized.cast('int32');
+      // const expanded = casted.expandDims(0);
+      // const obj = await net.executeAsync(expanded);
       // console.log(obj);
 
-      if (Array.isArray(obj)) {
-        const boxes: any = await obj[1].array();
-        const classes: any = await obj[2].array();
-        const scores: any = await obj[4].array();
+      const net = await handpose.load();
 
-        // Draw mesh
-        const ctx = canvasRef.current?.getContext('2d');
+      const hand = await net.estimateHands(video);
 
-        if (ctx) {
-          requestAnimationFrame(() => {
-            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-            const currText = drawRect(
-              boxes[0],
-              classes[0],
-              scores[0],
-              0.8,
-              videoWidth,
-              videoHeight,
-              ctx,
-            );
+      const GE = new fp.GestureEstimator([fp.Gestures.ThumbsUpGesture]);
 
-            if (currText && currText !== detectedText) {
-              setDetectedText(currText);
-            }
-          });
-        }
-      }
+      const estimatedGestures = await GE.estimate(hand[0].landmarks, 6.5);
 
-      tf.dispose(img);
-      tf.dispose(resized);
-      tf.dispose(casted);
-      tf.dispose(expanded);
-      tf.dispose(obj);
+      console.log(hand);
+
+      const ctx = canvasRef.current?.getContext('2d');
+      ctx?.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      drawHand(hand, ctx);
+
+      // if (Array.isArray(obj)) {
+      //   const boxes: any = await obj[1].array();
+      //   const classes: any = await obj[2].array();
+      //   const scores: any = await obj[4].array();
+
+      //   // Draw mesh
+      //   const ctx = canvasRef.current?.getContext('2d');
+
+      //   if (ctx) {
+      //     requestAnimationFrame(() => {
+      //       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      //       const currText = drawRect(
+      //         boxes[0],
+      //         classes[0],
+      //         scores[0],
+      //         0.8,
+      //         videoWidth,
+      //         videoHeight,
+      //         ctx,
+      //       );
+
+      //       if (currText && currText !== detectedText) {
+      //         setDetectedText(currText);
+      //       }
+      //     });
+      //   }
+      // }
+
+      // tf.dispose(img);
+      // tf.dispose(resized);
+      // tf.dispose(casted);
+      // tf.dispose(expanded);
+      // tf.dispose(obj);
     }
   };
 
