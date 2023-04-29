@@ -3,9 +3,10 @@ import IconButton from '@mui/material/IconButton';
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
 import { grey } from '@mui/material/colors';
 import Webcam from 'react-webcam';
-import * as tf from '@tensorflow/tfjs';
 import * as fp from 'fingerpose';
 import * as handpose from '@tensorflow-models/handpose';
+import '@tensorflow/tfjs-backend-cpu';
+import '@tensorflow/tfjs-backend-webgl';
 
 import { drawRect, drawHand } from './utilities';
 
@@ -31,18 +32,14 @@ const App = () => {
 
   // Main function
   const runCoco = async () => {
-    // // 3. TODO - Load network
-    // const net = await tf.loadGraphModel(
-    //   'https://tensorflowjsrealtimemodel.s3.au-syd.cloud-object-storage.appdomain.cloud/model.json',
-    // );
-
+    const net = await handpose.load();
     //  Loop and detect hands
     setInterval(() => {
-      detect();
-    }, 16.7);
+      detect(net);
+    }, 10);
   };
 
-  const detect = async () => {
+  const detect = async (net: any) => {
     // Check data is available
     if (
       typeof webcamRef.current !== 'undefined' &&
@@ -58,61 +55,29 @@ const App = () => {
       webcamRef.current.video.width = videoWidth;
       webcamRef.current.video.height = videoHeight;
 
-      // // 4. TODO - Make Detections
-      // const img = tf.browser.fromPixels(video);
-      // const resized = tf.image.resizeBilinear(img, [640, 480]);
-      // const casted = resized.cast('int32');
-      // const expanded = casted.expandDims(0);
-      // const obj = await net.executeAsync(expanded);
-      // console.log(obj);
-
-      const net = await handpose.load();
-
       const hand = await net.estimateHands(video);
 
-      const GE = new fp.GestureEstimator([fp.Gestures.ThumbsUpGesture]);
+      const loveGesture = new fp.GestureDescription('I love you');
+      loveGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
+      loveGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
+      loveGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.NoCurl, 1.0);
+      loveGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 0.5);
+      loveGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 0.5);
 
-      const estimatedGestures = await GE.estimate(hand[0].landmarks, 6.5);
+      const GE = new fp.GestureEstimator([fp.Gestures.ThumbsUpGesture, loveGesture]);
 
-      console.log(hand);
+      if (hand[0]) {
+        const estimatedGestures = await GE.estimate(hand[0].landmarks, 6.5);
+
+        if (estimatedGestures.gestures.length > 0) {
+          setDetectedText(estimatedGestures.gestures[0].name);
+        }
+
+      }
 
       const ctx = canvasRef.current?.getContext('2d');
       ctx?.clearRect(0, 0, window.innerWidth, window.innerHeight);
       drawHand(hand, ctx);
-
-      // if (Array.isArray(obj)) {
-      //   const boxes: any = await obj[1].array();
-      //   const classes: any = await obj[2].array();
-      //   const scores: any = await obj[4].array();
-
-      //   // Draw mesh
-      //   const ctx = canvasRef.current?.getContext('2d');
-
-      //   if (ctx) {
-      //     requestAnimationFrame(() => {
-      //       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      //       const currText = drawRect(
-      //         boxes[0],
-      //         classes[0],
-      //         scores[0],
-      //         0.8,
-      //         videoWidth,
-      //         videoHeight,
-      //         ctx,
-      //       );
-
-      //       if (currText && currText !== detectedText) {
-      //         setDetectedText(currText);
-      //       }
-      //     });
-      //   }
-      // }
-
-      // tf.dispose(img);
-      // tf.dispose(resized);
-      // tf.dispose(casted);
-      // tf.dispose(expanded);
-      // tf.dispose(obj);
     }
   };
 
@@ -156,23 +121,6 @@ const App = () => {
           paddingBottom: 10,
         }}
       >
-        {/* <Typed
-          typedRef={(typed: any) => {
-            setTyped(typed);
-          }}
-          strings={detectedText}
-          typeSpeed={20}
-          style={{
-            color: 'white',
-            position: 'absolute',
-            bottom: 65,
-            backgroundColor: 'black',
-            padding: 10,
-            borderRadius: 10,
-            fontSize: 14,
-          }}
-          showCursor={false}
-        /> */}
         <p
           style={{
             color: 'white',
@@ -234,8 +182,6 @@ const App = () => {
               setMirrored(true);
             }, 740);
           }
-
-          // typed?.reset();
         }}
       >
         <CameraswitchIcon sx={{ color: grey[50] }} />
