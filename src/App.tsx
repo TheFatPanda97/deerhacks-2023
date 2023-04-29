@@ -8,7 +8,7 @@ import * as handpose from '@tensorflow-models/handpose';
 import '@tensorflow/tfjs-backend-cpu';
 import '@tensorflow/tfjs-backend-webgl';
 
-import { drawRect, drawHand } from './utilities';
+import { drawHand } from './utilities';
 
 const App = () => {
   const [detectMode, setDetectMode] = useState<'spell' | 'word'>('spell');
@@ -72,7 +72,6 @@ const App = () => {
         if (estimatedGestures.gestures.length > 0) {
           setDetectedText(estimatedGestures.gestures[0].name);
         }
-
       }
 
       const ctx = canvasRef.current?.getContext('2d');
