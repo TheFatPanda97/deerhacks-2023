@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     react(),
-    // basicSsl(),
+    basicSsl(),
     VitePWA({
       registerType: 'autoUpdate',
       devOptions: {

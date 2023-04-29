@@ -5,11 +5,9 @@ import * as tf from '@tensorflow/tfjs';
 import { nextFrame } from '@tensorflow/tfjs';
 
 const App = () => {
-  // document.body.requestFullscreen();
-
   const videoConstraints = {
-    width: 1920,
-    height: 720,
+    width: window.innerHeight,
+    height: window.innerWidth,
     // facingMode: { exact: 'user' },
     facingMode: 'user',
   };
@@ -91,11 +89,11 @@ const App = () => {
         ref={webcamRef}
         muted
         videoConstraints={videoConstraints}
-        width={100}
         style={{
           position: 'absolute',
-          marginLeft: 'auto',
-          marginRight: 'auto',
+          marginLeft: '0',
+          marginRight: '0',
+          padding: 0,
           left: 0,
           right: 0,
           textAlign: 'center',
@@ -103,7 +101,6 @@ const App = () => {
           height: '100%',
         }}
       />
-      <button onClick={() => document.body.requestFullscreen()}>click me</button>
     </div>
   );
 };
