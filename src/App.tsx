@@ -31,18 +31,18 @@ const App = () => {
 
   // Main function
   const runCoco = async () => {
-    // 3. TODO - Load network
-    const net = await tf.loadGraphModel(
-      'https://tensorflowjsrealtimemodel.s3.au-syd.cloud-object-storage.appdomain.cloud/model.json',
-    );
+    // // 3. TODO - Load network
+    // const net = await tf.loadGraphModel(
+    //   'https://tensorflowjsrealtimemodel.s3.au-syd.cloud-object-storage.appdomain.cloud/model.json',
+    // );
 
     //  Loop and detect hands
     setInterval(() => {
-      detect(net);
+      detect();
     }, 16.7);
   };
 
-  const detect = async (net: tf.GraphModel) => {
+  const detect = async () => {
     // Check data is available
     if (
       typeof webcamRef.current !== 'undefined' &&
