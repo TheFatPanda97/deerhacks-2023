@@ -5,17 +5,19 @@ import { grey } from '@mui/material/colors';
 import Webcam from 'react-webcam';
 import * as fp from 'fingerpose';
 import * as handpose from '@tensorflow-models/handpose';
+import Loading from 'react-fullscreen-loading';
 import '@tensorflow/tfjs-backend-cpu';
 import '@tensorflow/tfjs-backend-webgl';
 
+import allGestures from './gestures';
 import { drawHand } from './utilities';
 
 const App = () => {
   const [detectMode, setDetectMode] = useState<'spell' | 'word'>('spell');
   const [cameraMode, setCameraMode] = useState<'user' | 'environment'>('user');
   const [mirrored, setMirrored] = useState(true);
-  // const [typed, setTyped] = useState<any>(null);
   const [detectedText, setDetectedText] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,7 +41,7 @@ const App = () => {
     }, 10);
   };
 
-  const detect = async (net: any) => {
+  const detect = async (net: handpose.HandPose) => {
     // Check data is available
     if (
       typeof webcamRef.current !== 'undefined' &&
@@ -57,14 +59,7 @@ const App = () => {
 
       const hand = await net.estimateHands(video);
 
-      const loveGesture = new fp.GestureDescription('I love you');
-      loveGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-      loveGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-      loveGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.NoCurl, 1.0);
-      loveGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 0.5);
-      loveGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 0.5);
-
-      const GE = new fp.GestureEstimator([fp.Gestures.ThumbsUpGesture, loveGesture]);
+      const GE = new fp.GestureEstimator(allGestures);
 
       if (hand[0]) {
         const estimatedGestures = await GE.estimate(hand[0].landmarks, 6.5);
@@ -75,22 +70,35 @@ const App = () => {
       }
 
       const ctx = canvasRef.current?.getContext('2d');
-      ctx?.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      drawHand(hand, ctx);
+
+      if (ctx && canvasRef.current) {
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        drawHand(hand, ctx);
+      }
     }
   };
 
   useEffect(() => {
-    runCoco();
-  });
+    (async () => {
+      setLoading(true);
+      try {
+        await runCoco();
+      } catch (error) {
+        console.log();
+      }
+      setLoading(false);
+    })();
+  }, []);
 
   return (
     <div>
+      <Loading loading={loading} background="#5597d3" loaderColor="#ffc000" />
       <canvas
         ref={canvasRef}
         style={{
           position: 'absolute',
           zIndex: 998,
+          transform: mirrored ? 'scaleX(-1)' : 'scaleX(1)',
         }}
         width={window.innerWidth}
         height={window.innerHeight}
@@ -103,7 +111,7 @@ const App = () => {
           height: webcamHeight,
           facingMode: cameraMode,
         }}
-        // mirrored={mirrored}
+        mirrored={mirrored}
       />
       <div
         style={{
@@ -120,19 +128,21 @@ const App = () => {
           paddingBottom: 10,
         }}
       >
-        <p
-          style={{
-            color: 'white',
-            position: 'absolute',
-            bottom: 65,
-            backgroundColor: 'black',
-            padding: 10,
-            borderRadius: 10,
-            fontSize: 14,
-          }}
-        >
-          {detectedText}
-        </p>
+        {detectedText && (
+          <p
+            style={{
+              color: 'white',
+              position: 'absolute',
+              bottom: 65,
+              backgroundColor: 'black',
+              padding: 10,
+              borderRadius: 10,
+              fontSize: 14,
+            }}
+          >
+            {detectedText}
+          </p>
+        )}
         <button
           onClick={() => setDetectMode('spell')}
           style={{

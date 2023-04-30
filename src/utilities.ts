@@ -7,31 +7,33 @@ const fingerJoints = {
   pinky: [0, 17, 18, 19, 20],
 };
 
+type TFingerNames = 'thumb' | 'index' | 'mid' | 'ring' | 'pinky';
+
 //drawing function
-export const drawHand = (prediction: any[], ctx: any) => {
+export const drawHand = (
+  prediction: { landmarks: number[][] }[],
+  ctx: CanvasRenderingContext2D,
+) => {
   //check the prediction
   if (prediction.length > 0) {
-    //loop to the preditions
+    //loop to the predictions
     prediction.forEach((prediction) => {
       //grab landmarks
       const landmarks = prediction.landmarks;
 
       //loop the finger joints
       for (let j = 0; j < Object.keys(fingerJoints).length; j++) {
-        const finger = Object.keys(fingerJoints)[j];
+        const finger = Object.keys(fingerJoints)[j] as TFingerNames;
 
-        // @ts-ignore
         for (let k = 0; k < fingerJoints[finger].length - 1; k++) {
-          // @ts-ignore
           const firstJointIndex = fingerJoints[finger][k];
-          // @ts-ignore
           const secondJointIndex = fingerJoints[finger][k + 1];
 
           //draw joints
           ctx.beginPath();
           ctx.moveTo(landmarks[firstJointIndex][0], landmarks[firstJointIndex][1]);
           ctx.lineTo(landmarks[secondJointIndex][0], landmarks[secondJointIndex][1]);
-          ctx.strokeStyle = 'gold';
+          ctx.strokeStyle = '#ffc000';
           ctx.lineWidth = 2;
           ctx.stroke();
         }
@@ -47,11 +49,14 @@ export const drawHand = (prediction: any[], ctx: any) => {
 
         //start drawing
         ctx.beginPath();
-        ctx.arc(x, y, 5, 0, 3 * Math.PI);
+        ctx.arc(x, y, 7, 0, 3 * Math.PI);
 
         //set line color
-        ctx.fillStyle = 'navy';
+        ctx.fillStyle = '#5597d3';
         ctx.fill();
+        ctx.strokeStyle = '#ffc000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
     });
   }
