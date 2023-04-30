@@ -37,9 +37,18 @@ const App = () => {
     webcamHeight = window.innerWidth;
   }
 
+  const toggleDetectMode = (mode: 'spell' | 'word') => {
+    const ctx = canvasRef.current?.getContext('2d');
+
+    if (ctx && canvasRef.current) {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+
+    setDetectMode(mode);
+  };
+
   // Main function
   const runCoco = async (detectMode: 'spell' | 'word') => {
-    console.log(detectMode);
     const net = await handpose.load();
     const GE = detectMode === 'word' ? wordGE : letterGE;
 
@@ -155,7 +164,7 @@ const App = () => {
           </p>
         )}
         <button
-          onClick={() => setDetectMode('spell')}
+          onClick={() => toggleDetectMode('spell')}
           style={{
             borderRadius: 30,
             paddingLeft: 30,
@@ -170,7 +179,7 @@ const App = () => {
           Spell
         </button>
         <button
-          onClick={() => setDetectMode('word')}
+          onClick={() => toggleDetectMode('word')}
           style={{
             borderRadius: 30,
             paddingLeft: 30,
@@ -187,7 +196,6 @@ const App = () => {
       </div>
       <IconButton
         color="primary"
-        aria-label="upload picture"
         component="label"
         style={{ position: 'absolute', bottom: 10, right: 15, zIndex: 9999 }}
         onClick={() => {
