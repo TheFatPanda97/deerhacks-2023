@@ -1,3 +1,5 @@
+import wordBank from './assets/word-bank.json';
+
 //finger points
 const fingerJoints = {
   thumb: [0, 1, 2, 3, 4],
@@ -60,4 +62,21 @@ export const drawHand = (
       }
     });
   }
+};
+
+export const autoComplete = (searchString: string) => {
+  const { commonWords } = wordBank;
+
+  const regex = `^${searchString}.*`;
+  const re = new RegExp(regex);
+
+  for (let i = 0; i < commonWords.length; i++) {
+    const currWord = commonWords[i];
+
+    if (re.test(currWord)) {
+      return [currWord, currWord.slice(searchString.length)];
+    }
+  }
+
+  return searchString;
 };

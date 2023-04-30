@@ -1,28 +1,32 @@
 import { useRef, useEffect, useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { grey } from '@mui/material/colors';
 import Webcam from 'react-webcam';
 import * as fp from 'fingerpose';
 import * as handpose from '@tensorflow-models/handpose';
 import Loading from 'react-fullscreen-loading';
+
 import '@tensorflow/tfjs-backend-cpu';
 import '@tensorflow/tfjs-backend-webgl';
 
 import allWordGestures from './gestures/words';
 import allLetterGestures from './gestures/letters';
-import { drawHand } from './utilities';
+import { drawHand, autoComplete } from './utilities';
 
 const letterGE = new fp.GestureEstimator(allLetterGestures);
 const wordGE = new fp.GestureEstimator(allWordGestures);
+let globalSpell = '';
 
 const App = () => {
-  const [detectMode, setDetectMode] = useState<'spell' | 'word'>('spell');
+  const [detectMode, setDetectMode] = useState<'spell' | 'word'>('word');
   const [cameraMode, setCameraMode] = useState<'user' | 'environment'>('user');
   const [mirrored, setMirrored] = useState(true);
   const [detectedText, setDetectedText] = useState('');
   const [loading, setLoading] = useState(false);
   const [intervalId, setIntervalId] = useState<null | NodeJS.Timer>(null);
+  const [completedEnding, setCompletedEnding] = useState('');
 
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,20 +48,29 @@ const App = () => {
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     }
 
+    globalSpell = '';
+    setDetectedText('');
     setDetectMode(mode);
+    setCompletedEnding('');
   };
 
   // Main function
   const runCoco = async (detectMode: 'spell' | 'word') => {
     const net = await handpose.load();
     const GE = detectMode === 'word' ? wordGE : letterGE;
+    const tol = detectMode === 'word' ? 6.5 : 8;
 
     //  Loop and detect hands
-    const id = setInterval(() => detect(net, GE), 10);
+    const id = setInterval(() => detect(net, GE, detectMode, tol), 10);
     setIntervalId(id);
   };
 
-  const detect = async (net: handpose.HandPose, GE: any) => {
+  const detect = async (
+    net: handpose.HandPose,
+    GE: any,
+    detectMode: 'spell' | 'word',
+    tol: number,
+  ) => {
     // Check data is available
     if (
       typeof webcamRef.current !== 'undefined' &&
@@ -76,10 +89,20 @@ const App = () => {
       const hand = await net.estimateHands(video);
 
       if (hand.length > 0) {
-        const estimatedGestures = await GE.estimate(hand[0].landmarks, 6.5);
+        const estimatedGestures = await GE.estimate(hand[0].landmarks, tol);
 
         if (estimatedGestures.gestures.length > 0) {
-          setDetectedText(estimatedGestures.gestures[0].name);
+          const currPredication = estimatedGestures.gestures[0].name;
+
+          if (detectMode === 'spell') {
+            if (globalSpell.slice(-1) !== currPredication) {
+              globalSpell += currPredication;
+              setDetectedText(globalSpell);
+              setCompletedEnding(autoComplete(globalSpell)[1]);
+            }
+          } else {
+            setDetectedText(currPredication);
+          }
         }
       }
 
@@ -109,6 +132,8 @@ const App = () => {
       setLoading(false);
     })();
   }, [detectMode]);
+
+  // useEffect(() => console.log(detectedText), [detectedText]);
 
   return (
     <div>
@@ -161,6 +186,7 @@ const App = () => {
             }}
           >
             {detectedText}
+            <span style={{ color: 'grey' }}>{completedEnding}</span>
           </p>
         )}
         <button
@@ -213,6 +239,17 @@ const App = () => {
         }}
       >
         <CameraswitchIcon sx={{ color: grey[50] }} />
+      </IconButton>
+      <IconButton
+        color="primary"
+        component="label"
+        style={{ position: 'absolute', bottom: 10, left: 15, zIndex: 9999 }}
+        onClick={() => {
+          setDetectedText('');
+          globalSpell = '';
+        }}
+      >
+        <DeleteIcon sx={{ color: grey[50] }} />
       </IconButton>
     </div>
   );
