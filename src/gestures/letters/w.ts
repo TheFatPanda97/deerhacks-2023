@@ -6,5 +6,6 @@ wSpell.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 0.9);
 wSpell.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 0.9);
 wSpell.addCurl(fp.Finger.Ring, fp.FingerCurl.NoCurl, 0.9);
 wSpell.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 0.9);
+wSpell.addDirection(fp.Finger.Middle, fp.FingerDirection.VerticalUp, 0.9);
 
 export default wSpell;
