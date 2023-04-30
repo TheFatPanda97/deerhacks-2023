@@ -9,8 +9,12 @@ import Loading from 'react-fullscreen-loading';
 import '@tensorflow/tfjs-backend-cpu';
 import '@tensorflow/tfjs-backend-webgl';
 
-import allGestures from './gestures';
+import allWordGestures from './gestures/words';
+import allLetterGestures from './gestures/letters';
 import { drawHand } from './utilities';
+
+const letterGE = new fp.GestureEstimator(allLetterGestures);
+const wordGE = new fp.GestureEstimator(allWordGestures);
 
 const App = () => {
   const [detectMode, setDetectMode] = useState<'spell' | 'word'>('spell');
@@ -18,6 +22,7 @@ const App = () => {
   const [mirrored, setMirrored] = useState(true);
   const [detectedText, setDetectedText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [intervalId, setIntervalId] = useState<null | NodeJS.Timer>(null);
 
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,15 +38,17 @@ const App = () => {
   }
 
   // Main function
-  const runCoco = async () => {
+  const runCoco = async (detectMode: 'spell' | 'word') => {
+    console.log(detectMode);
     const net = await handpose.load();
+    const GE = detectMode === 'word' ? wordGE : letterGE;
+
     //  Loop and detect hands
-    setInterval(() => {
-      detect(net);
-    }, 10);
+    const id = setInterval(() => detect(net, GE), 10);
+    setIntervalId(id);
   };
 
-  const detect = async (net: handpose.HandPose) => {
+  const detect = async (net: handpose.HandPose, GE: any) => {
     // Check data is available
     if (
       typeof webcamRef.current !== 'undefined' &&
@@ -59,9 +66,7 @@ const App = () => {
 
       const hand = await net.estimateHands(video);
 
-      const GE = new fp.GestureEstimator(allGestures);
-
-      if (hand[0]) {
+      if (hand.length > 0) {
         const estimatedGestures = await GE.estimate(hand[0].landmarks, 6.5);
 
         if (estimatedGestures.gestures.length > 0) {
@@ -81,14 +86,20 @@ const App = () => {
   useEffect(() => {
     (async () => {
       setLoading(true);
+
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+
       try {
-        await runCoco();
+        await runCoco(detectMode);
       } catch (error) {
         console.log();
       }
+
       setLoading(false);
     })();
-  }, []);
+  }, [detectMode]);
 
   return (
     <div>

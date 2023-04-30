@@ -3,6 +3,6 @@ import loveGesture from './ILoveYou';
 import noGesture from './No';
 import yesGesture from './Yes';
 import whyGesture from './Why';
-// import eSpell from './e';
+import okayGesture from './Okay';
 
-export default [whyGesture, helloGesture, loveGesture, noGesture, yesGesture];
+export default [whyGesture, helloGesture, loveGesture, noGesture, yesGesture, okayGesture];
